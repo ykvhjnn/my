@@ -1,0 +1,91 @@
+# 端口
+mixed-port: 8080
+# 局域网访问控制(白名单/黑名单)
+allow-lan: false
+lan-allowed-ips: ["0.0.0.0/0", "::/0"]
+lan-disallowed-ips: []
+
+ipv6: true
+unified-delay: false
+tcp-concurrent: true
+profile:
+  store-selected: true
+  store-fake-ip: true
+global-client-fingerprint: chrome
+
+p: &p
+    type: http
+    interval: 3600
+    health-check: {enable: true, url: 'https://cp.cloudflare.com', interval: 600, timeout: 3000, max-failed-times: 4}
+    override:
+      udp: true
+      down: "200 Mbps"
+      up: "200 Mbps"
+proxy-providers:
+  NoMoreWalls:
+    <<: *p
+    url: 'https://raw.githubusercontent.com/peasoft/NoMoreWalls/refs/heads/master/snippets/nodes_US.meta.yml'
+hosts:
+  doh.pub: [1.12.12.12, 120.53.53.53, 2402:4e00::]
+  dns.alidns.com: [223.5.5.5, 223.6.6.6, 2400:3200::1, 2400:3200:baba::1]
+dns:
+  enable: true
+  ipv6: true
+  respect-rules: false
+  enhanced-mode: fake-ip
+  fake-ip-filter: ['rule-set:fakeip-filter,cn']
+  default-nameserver:
+    - 223.5.5.5
+    - system
+  nameserver:
+    - 8.8.4.4
+    - 208.67.222.222
+  nameserver-policy:
+    "rule-set:cn":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
+      - system
+    
+proxy-groups:
+  - { name: 禁封域名, type: select, proxies: [♻️Auto, 💡Fallback, 👋Select, DIRECT, REJECT]}
+  - { name: 其他域名, type: select, proxies: [DIRECT, ♻️Auto]}
+  - { name: 👋Select, type: select, include-all: true }
+  - { name: ♻️Auto, type: url-test, include-all: true}
+  - { name: 💡Fallback, type: url-test, include-all: true, tolerance: 300}
+  
+rules:
+  - PROCESS-NAME,com.android.packageinstaller,REJECT
+  - PROCESS-NAME,.com.tencent.wetype,REJECT
+  - RULE-SET,antiad,REJECT
+  # 突破锁区
+  - RULE-SET,region,禁封域名
+  - DOMAIN-SUFFIX,edge.microsoft.com,禁封域名
+  # 防止因ip变动封帐户
+  - DOMAIN-SUFFIX,outlook.com,DIRECT
+  - DOMAIN-SUFFIX,login.live.com,DIRECT
+  # final
+  - RULE-SET,proxy,禁封域名
+  - MATCH,其他域名
+
+rule-anchor:
+  ip: &ip {type: http, interval: 86400, behavior: ipcidr, format: yaml}
+  domain: &domain {type: http, interval: 86400, behavior: domain, format: yaml}
+  classical: &classical {type: http, interval: 86400, behavior: classical, format: yaml}
+  mrs: &mrs {type: http, interval: 86400, behavior: domain, format: mrs}
+  mrsip: &mrsip {type: http, interval: 86400, behavior: ipcidr, format: mrs}
+rule-providers:
+  fakeip-filter:
+    <<: *mrs
+    url: "https://github.boki.moe/https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/fakeip-filter.mrs"
+  proxy:
+    <<: *mrs
+    url: "https://github.boki.moe/https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/proxy.mrs"
+  cn:
+    <<: *mrs
+    url: "https://github.boki.moe/https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo-ruleset/cn.mrs"
+  antiad:
+    <<: *mrs
+    url: "https://github.boki.moe/https://github.com/ykvhjnn/ad-filter/raw/refs/heads/main/rules/anti-ad.mrs"
+  region:
+    <<: *classical
+    url: "https://github.boki.moe/https://raw.githubusercontent.com/peasoft/NoMoreWalls/refs/heads/master/snippets/region.yml"
