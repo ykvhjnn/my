@@ -1,7 +1,7 @@
 mixed-port: 8080
 
 # 局域网访问控制（白名单/黑名单配置）
-allow-lan: false
+allow-lan: true
 lan-allowed-ips: ["0.0.0.0/0", "::/0"]  # 允许所有 IPv4 和 IPv6 地址
 lan-disallowed-ips: []  # 默认没有禁止的 IP
 
@@ -11,7 +11,7 @@ tcp-concurrent: true  # 启用并发 TCP 连接
 profile: {store-selected: true, store-fake-ip: true}
 global-client-fingerprint: chrome
 
-p: &p {type: http, interval: 3600, health-check: {enable: true, url: "https://cp.cloudflare.com", interval: 600, timeout: 3000, max-failed-times: 4}, override: {udp: true, down: "200 Mbps", up: "200 Mbps"}}
+p: &p {type: http, interval: 3600, health-check: {enable: true, url: "http://www.gstatic.com/generate_204", interval: 600, timeout: 3000, max-failed-times: 4}, override: {udp: true, down: "200 Mbps", up: "200 Mbps"}}
 
 proxy-providers:
   NoMoreWalls: {<<: *p, url: "https://raw.githubusercontent.com/peasoft/NoMoreWalls/refs/heads/master/snippets/nodes_US.meta.yml"}
@@ -32,21 +32,22 @@ dns:
 
 proxy-groups:
   - {name: 禁封域名, type: select, proxies: ["♻️Auto", "💡Fallback", "👋Select", DIRECT, REJECT]}
-  - {name: 其他域名, type: select, proxies: [DIRECT, "♻️Auto"]}
+  - {name: 其他域名, type: select, proxies: [DIRECT, "禁封域名"]}
   - {name: 👋Select, type: select, include-all: true}
-  - {name: ♻️Auto, type: url-test, include-all: true}
-  - {name: 💡Fallback, type: url-test, include-all: true, tolerance: 300}
+  - {name: ♻️Auto, type: url-test, include-all: true, interval: 600}
+  - {name: 💡Fallback, type: url-test, include-all: true, tolerance: 300, interval: 600}
 
 rules:
+  # 防止因ip变动封帐户
+  - DOMAIN-SUFFIX,outlook.com,DIRECT
+  - DOMAIN-SUFFIX,login.live.com,DIRECT
+  # 广告拦截
   - PROCESS-NAME,com.android.packageinstaller,REJECT
   - PROCESS-NAME,.com.tencent.wetype,REJECT
   - RULE-SET,antiad,REJECT
   # 突破锁区
-  - RULE-SET,region,禁封域名
   - DOMAIN-SUFFIX,edge.microsoft.com,禁封域名
-  # 防止因ip变动封帐户
-  - DOMAIN-SUFFIX,outlook.com,DIRECT
-  - DOMAIN-SUFFIX,login.live.com,DIRECT
+  - RULE-SET,region,禁封域名
   # 最终规则
   - RULE-SET,proxy,禁封域名
   - MATCH,其他域名
