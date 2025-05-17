@@ -6,7 +6,7 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $@"; }
 error() { echo "$(date '+%Y-%m-%d %H:%M:%S') [ERROR] $@" >&2; }
 
 declare -A RULES=(
-  [Ad]="sort.py,filter-country-tld.py
+  [Ad]="sort.py
 https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/pro.plus.mini.txt
 https://raw.githubusercontent.com/ghvjjjj/adblockfilters/main/rules/adblockdnslite.txt
 https://raw.githubusercontent.com/hagezi/dns-blocklists/main/adblock/native.xiaomi.txt
